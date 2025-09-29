@@ -93,3 +93,31 @@ def test_delete_message(client):
     rv = client.get('/delete/1')
     data = json.loads(rv.data)
     assert data["status"] == 1
+
+def test_search_route(client):
+    """Ensure that the search route works as expected"""
+    # Test search page loads without query
+    rv = client.get("/search/")
+    assert rv.status_code == 200
+    assert b"Search" in rv.data  # Button text from index.html and search.html
+    assert b'<form action="/search/" method="get"' in rv.data  # Search form present
+
+    # Add a post to search for
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    client.post(
+        "/add",
+        data=dict(title="TestTitle", text="TestText"),
+        follow_redirects=True,
+    )
+
+    # Test search page loads with query parameter that matches the post
+    rv = client.get("/search/?query=TestTitle")
+    assert rv.status_code == 200
+    assert b"TestTitle" in rv.data
+    assert b"TestText" in rv.data
+
+    # Test search page loads with query parameter that does not match
+    rv = client.get("/search/?query=NoMatch")
+    assert rv.status_code == 200
+    assert b"TestTitle" not in rv.data
+    assert b"TestText" not in rv.data
